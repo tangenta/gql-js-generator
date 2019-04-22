@@ -1,0 +1,20 @@
+GQLSchema => (Query | Mutation | Union | Type | Enum) GQLSchema | epsilon
+
+Query => (@query | +@query) Def
+Mutation => (@mutation | +@mutation) Def
+ArgList => `(` Arg cArgList `)` | epsilon
+cArgList => , Arg cArgList | epsilon
+Arg => name : typename
+
+Union => name = TypeList
+TypeList => name cTypeList
+cTypeList => `|` TypeList | epsilon
+
+Def => name ArgList : typename
+
+Type => type name { Defs }
+Defs => Def OptionalDefs
+OptionalDefs => Def OptionalDefs | epsilon
+
+Enum => enum name { EnumDefs }
+EnumDefs => name EnumDefs | name
