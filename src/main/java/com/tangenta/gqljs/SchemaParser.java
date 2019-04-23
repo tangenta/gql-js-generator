@@ -69,7 +69,7 @@ public class SchemaParser {
         List<GqlDef> defs = defs(tokens);
         assertEq(tokens.next(), ("}"));
 
-        return new Type(typeName, defs);
+        return new Type(typeName, "type", defs);
     }
 
     private static Enume enume(Scanner tokens) {
@@ -89,7 +89,7 @@ public class SchemaParser {
         List<GqlDef> defs = defs(tokens);
         assertEq(tokens.next(), ("}"));
 
-        return new Type(typeName, defs);
+        return new Type(typeName, "input", defs);
     }
 
     private static Map<String, String> argList(Scanner tokens) {

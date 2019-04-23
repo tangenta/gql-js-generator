@@ -11,6 +11,7 @@ public class Type {
             "ID", "Int", "Long", "String"
     };
     String name;
+    String typename;
     List<GqlDef> fieldTypeMap;
 
     public static boolean isScalar(String typename) {

@@ -3,11 +3,14 @@ package com.tangenta.gqljs;
 import com.tangenta.gqljs.schemaType.Operation;
 import com.tangenta.gqljs.schemaType.Query;
 import com.tangenta.gqljs.schemaType.Type;
+import com.tangenta.gqljs.schemaType.Union;
 import com.tangenta.gqljs.schemaType.util.GqlDef;
+import com.tangenta.gqljs.schemaType.util.Util;
 import lombok.val;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
@@ -16,8 +19,65 @@ public class GQLPrinter {
     private static final String INDENT = "  ";
     private static final String DINDENT = INDENT + INDENT;
 
-    public static String toGQL(Schema schema) {
-        return "not-impl";
+    public static String toJavaImpl(Schema schema, String schemaType) {
+        val builder = new StringBuilder();
+        Operation operation = schema.allOperations()
+                .filter(op -> op.getName().equals(schemaType))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("impossible"));
+
+        builder.append(javaMethod(operation)).append("\n");
+
+        operation.getArgs().values().stream()
+                .map(typeStr -> schema.findType(Util.strip(typeStr)))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .forEach(type -> {
+                    if (type.getTypename().equals("input")) {
+                        builder.append(javaPubStaticClass(type)).append("\n");
+                    }
+                });
+
+        String retType = operation.getStrippedRetType();
+        schema.findUnion(retType).ifPresent(union -> {
+            union.getSubTypes().forEach(subType -> {
+                schema.findType(subType).ifPresent(type -> {
+                    builder.append(javaPlainInterface(type, union.getName())).append("\n");
+                });
+            });
+
+            builder.append(javaSuperInterface(union)).append("\n");
+        });
+
+        schema.findType(retType).ifPresent(type -> {
+            builder.append(javaPlainInterface(type, null)).append("\n");
+        });
+
+        return builder.toString();
+    }
+
+    public static String toDSL(Schema schema, String schemaType) {
+        Operation operation = schema.allOperations().filter(op -> op.getName().equals(schemaType))
+                .findFirst().orElse(null);
+        if (operation == null) throw new RuntimeException(schemaType + " not found");
+
+        val builder = new StringBuilder();
+
+        String retType = operation.getStrippedRetType();
+        schema.findUnion(retType).ifPresent(union -> {
+            union.getSubTypes().forEach(subType -> {
+                Type type = schema.findType(subType).orElseThrow(() -> new RuntimeException("impossible"));
+                builder.append(typeDef(type)).append("\n");
+            });
+
+            builder.append(unionDef(union)).append("\n");
+        });
+
+        schema.findType(retType).ifPresent(type -> {
+            builder.append(typeDef(type)).append("\n");
+        });
+
+        return builder.toString();
     }
 
     public static String toJSFunc(Schema schema) {
@@ -84,6 +144,73 @@ public class GQLPrinter {
         });
         builder.append(indent).append("}\n");
         return builder.toString();
+    }
+
+    private static String javaMethod(Operation operation) {
+        val argList = operation.getArgs();
+        if (operation.needAuth()) argList.put("userToken", "String");
+        val argsStr = argList.entrySet().stream()
+                .map(entry -> Util.strip(entry.getValue()) + " " + entry.getKey())
+                .collect(Collectors.joining(", "));
+
+        return String.format("%s %s(%s) {\n" +
+                "    return null;\n" +
+                "}\n",
+                operation.getStrippedRetType(),
+                operation.getName(),
+                argsStr
+                );
+    }
+
+    private static String javaSuperInterface(Union union) {
+        return String.format("interface %s {}\n",
+                union.getName());
+    }
+
+    private static String javaPubStaticClass(Type type) {
+        return String.format("public static class %s {\n" +
+                        "%s\n" +
+                        "}\n",
+                type.getName(),
+                javaClassField(type, false));
+    }
+
+    private static String javaPlainInterface(Type type, String implUnion) {
+        return String.format("interface %s %s {\n" +
+                "%s\n" +
+                "}\n",
+                type.getName(),
+                implUnion == null ? "" : "extends " + implUnion,
+                javaClassField(type, true));
+    }
+
+    private static String javaClassField(Type type, boolean containsArgPar) {
+        return type.getFieldTypeMap().stream()
+                .map(gqlDef -> String.format(DINDENT + "%s get%s" + (containsArgPar ? "(%s)": "%s") + ";",
+                        gqlDef.getStrippedRetType(),
+                        capitalize(gqlDef.getDefName()),
+                        gqlDef.getParams().entrySet().stream()
+                                .map(e -> Util.strip(e.getValue()) + " " + e.getKey())
+                                .collect(Collectors.joining(", "))
+                ))
+                .collect(Collectors.joining("\n"));
+    }
+
+    private static String typeDef(Type type) {
+        return String.format("%s %s {\n" +
+                INDENT + "%s\n" +
+                "}\n",
+                type.getTypename(),
+                type.getName(),
+                type.getFieldTypeMap().stream()
+                        .map(gqlDef -> gqlDef.getDefName() + ": " + gqlDef.getRetName())
+                        .collect(Collectors.joining("\n" + INDENT)));
+    }
+
+    private static String unionDef(Union union) {
+        return String.format("union %s = %s",
+                union.getName(),
+                String.join(" | ", union.getSubTypes()));
     }
 
     private static String varContent(Map<String, String> variables) {
