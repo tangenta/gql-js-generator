@@ -85,7 +85,7 @@ public class GQLPrinter {
             val allVariables = schema.allVariablesForOper(op.getName());
             return String.format("const %s = %s => sendGQL({\n" +
                             INDENT + "query: %s,\n" +
-                            INDENT + "variables: %s%s" +
+                            "%s%s" +
                             "\n});\n",
                     op.getName(),
                     jsParamList(op, allVariables),
@@ -163,30 +163,30 @@ public class GQLPrinter {
     }
 
     private static String javaSuperInterface(Union union) {
-        return String.format("interface %s {}\n",
+        return String.format("public interface %s {}\n",
                 union.getName());
     }
 
     private static String javaPubStaticClass(Type type) {
+        String fields = type.getFieldTypeMap().stream()
+                .map(gqlDef -> String.format(DINDENT + "%s %s%s;",
+                        gqlDef.getStrippedRetType(),
+                        gqlDef.getDefName(),
+                        gqlDef.getParams().entrySet().stream()
+                                .map(e -> Util.strip(e.getValue()) + " " + e.getKey())
+                                .collect(Collectors.joining(", "))
+                ))
+                .collect(Collectors.joining("\n"));
         return String.format("public static class %s {\n" +
                         "%s\n" +
                         "}\n",
                 type.getName(),
-                javaClassField(type, false));
+                fields);
     }
 
     private static String javaPlainInterface(Type type, String implUnion) {
-        return String.format("interface %s %s {\n" +
-                "%s\n" +
-                "}\n",
-                type.getName(),
-                implUnion == null ? "" : "extends " + implUnion,
-                javaClassField(type, true));
-    }
-
-    private static String javaClassField(Type type, boolean containsArgPar) {
-        return type.getFieldTypeMap().stream()
-                .map(gqlDef -> String.format(DINDENT + "%s get%s" + (containsArgPar ? "(%s)": "%s") + ";",
+        String methods = type.getFieldTypeMap().stream()
+                .map(gqlDef -> String.format(DINDENT + "%s get%s(%s);",
                         gqlDef.getStrippedRetType(),
                         capitalize(gqlDef.getDefName()),
                         gqlDef.getParams().entrySet().stream()
@@ -194,6 +194,12 @@ public class GQLPrinter {
                                 .collect(Collectors.joining(", "))
                 ))
                 .collect(Collectors.joining("\n"));
+        return String.format("public interface %s %s {\n" +
+                "%s\n" +
+                "}\n",
+                type.getName(),
+                implUnion == null ? "" : "extends " + implUnion,
+                methods);
     }
 
     private static String typeDef(Type type) {
@@ -214,7 +220,8 @@ public class GQLPrinter {
     }
 
     private static String varContent(Map<String, String> variables) {
-        return "{\n" +
+        if (variables.entrySet().isEmpty()) return "";
+        return INDENT + "variables: {\n" +
                 variables.entrySet().stream()
                         .map(e -> DINDENT + e.getKey() + ": " + e.getKey())
                         .collect(Collectors.joining(",\n")) +
@@ -223,7 +230,8 @@ public class GQLPrinter {
 
     private static String optionAuth(Operation operation) {
         if (!operation.needAuth()) return "";
-        return ",\n" + INDENT + "\nauth: auth\n";
+        if (!operation.getArgs().isEmpty()) return ",\n" + INDENT + "auth: auth";
+        return INDENT + "auth: auth";
     }
 
     private static String jsParamList(Operation op, Map<String, String> allVariables) {

@@ -7,8 +7,11 @@ import java.nio.file.Paths;
 
 public class Application {
     public static void main(String[] args) throws IOException {
-        Schema schema = buildSchemaFromFile("D:\\bbs-gql-test\\bbsgql-04240018.txt");
-        printJava(schema, "");
+        Schema schema = buildSchemaFromFile("D:\\bbs-gql-test\\bbsgql-04242003.txt");
+        printJSConst(schema, "D:\\bbs-gql-test\\bbsgql-const.js");
+        printJSFunc(schema, "D:\\bbs-gql-test\\bbsgql-func.js");
+
+//        printJava(schema, "editPersonInfo");
     }
 
     public static Schema buildSchemaFromFile(String fileName) throws IOException {
