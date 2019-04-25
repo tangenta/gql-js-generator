@@ -11,7 +11,7 @@ public class Application {
         printJSConst(schema, "D:\\bbs-gql-test\\bbsgql-const.js");
         printJSFunc(schema, "D:\\bbs-gql-test\\bbsgql-func.js");
 
-//        printJava(schema, "editPersonInfo");
+//        printJava(schema, "logout");
     }
 
     public static Schema buildSchemaFromFile(String fileName) throws IOException {

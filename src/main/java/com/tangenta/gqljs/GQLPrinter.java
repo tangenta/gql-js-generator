@@ -122,6 +122,7 @@ public class GQLPrinter {
     }
 
     private static String retContent(String retType, Schema schema, String indent) {
+        if (Type.isScalar(retType)) return "\n";
         val builder = new StringBuilder();
         builder.append(" {\n");
         schema.findUnion(retType).ifPresent(union -> {
@@ -153,7 +154,7 @@ public class GQLPrinter {
                 .map(entry -> Util.strip(entry.getValue()) + " " + entry.getKey())
                 .collect(Collectors.joining(", "));
 
-        return String.format("%s %s(%s) {\n" +
+        return String.format("public static %s %s(%s) {\n" +
                 "    return null;\n" +
                 "}\n",
                 operation.getStrippedRetType(),
@@ -169,7 +170,7 @@ public class GQLPrinter {
 
     private static String javaPubStaticClass(Type type) {
         String fields = type.getFieldTypeMap().stream()
-                .map(gqlDef -> String.format(DINDENT + "%s %s%s;",
+                .map(gqlDef -> String.format(DINDENT + "public %s %s%s;",
                         gqlDef.getStrippedRetType(),
                         gqlDef.getDefName(),
                         gqlDef.getParams().entrySet().stream()

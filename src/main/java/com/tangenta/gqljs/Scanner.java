@@ -14,7 +14,6 @@ public class Scanner {
 
     public Scanner(String src) {
         store = tokenize(src).toArray(new String[0]);
-        System.out.println(Arrays.toString(store));
         index = 0;
     }
 

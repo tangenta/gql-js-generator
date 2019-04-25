@@ -8,7 +8,7 @@ import java.util.List;
 @Value
 public class Type {
     private static final String[] SCALARS = {
-            "ID", "Int", "Long", "String"
+            "ID", "Int", "Long", "String", "Boolean"
     };
     String name;
     String typename;
