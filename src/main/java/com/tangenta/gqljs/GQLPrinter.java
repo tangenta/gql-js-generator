@@ -88,9 +88,9 @@ public class GQLPrinter {
                             "%s%s" +
                             "\n});\n",
                     op.getName(),
-                    jsParamList(op, allVariables),
+                    jsParamList(op, op.getArgs()),
                     fromBigCamel_TO_ALL_CAPITAL(op.getName()),
-                    varContent(allVariables),
+                    varContent(op.getArgs()),
                     optionAuth(op)
                     );
         }).collect(Collectors.joining("\n"));
@@ -243,7 +243,7 @@ public class GQLPrinter {
     }
 
     private static String retContArgList(GqlDef gqlDef) {
-        return argList(gqlDef.getParams(), entry -> entry.getKey() + ": " + entry.getKey());
+        return argList(gqlDef.getParams(), entry -> entry.getKey() + ": $" + entry.getKey());
     }
 
     private static String argList(Map<String, String> kvMap, Function<Map.Entry<String, String>, String> transformer) {
